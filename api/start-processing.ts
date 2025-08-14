@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { SOP_PROMPT, SUMMARY_PROMPT, ACTION_ITEMS_PROMPT, KEY_INFO_PROMPT_SCHEMA, MOCK_TRANSCRIPTION } from '../constants';
 import { KeyInfo } from '../types';
 import { jobStorage } from './_job-storage'; // In-memory store
@@ -23,14 +23,12 @@ async function generateContent(promptTemplate: string, transcription: string): P
     
     const text = response.text;
 
-    // Use a strict `typeof` check. This is the most reliable way to guard against
-    // `undefined` and satisfy the TypeScript compiler.
-    if (typeof text !== 'string') {
-        console.error("Gemini API Error: Expected a valid string response for content generation, but got:", text);
-        throw new Error("Failed to generate content: received an invalid response from the AI model.");
+    if (typeof text === 'string') {
+        return text;
     }
 
-    return text;
+    console.error("Gemini API Error: Expected a valid string response for content generation, but got:", text);
+    throw new Error("Failed to generate content: received an invalid response from the AI model.");
 }
 
 async function generateKeyInfo(transcription: string): Promise<KeyInfo> {
@@ -43,22 +41,20 @@ async function generateKeyInfo(transcription: string): Promise<KeyInfo> {
     
     const jsonText = response.text;
 
-    // Use a strict `typeof` check to ensure the response is a string and not empty
-    // before attempting to parse it as JSON.
-    if (typeof jsonText !== 'string' || jsonText.trim() === '') {
-        console.error("Gemini API Error: Expected a valid JSON string response for key info extraction, but got:", jsonText);
-        throw new Error("Failed to extract key info: received an empty or invalid response from the AI model.");
+    if (typeof jsonText === 'string' && jsonText.trim() !== '') {
+        try {
+            return JSON.parse(jsonText.trim()) as KeyInfo;
+        } catch (e) {
+            console.error("JSON Parsing Error: Failed to parse the response from Gemini API.", {
+                error: e,
+                response: jsonText
+            });
+            throw new Error("Failed to process key information from the AI model due to a formatting error.");
+        }
     }
     
-    try {
-        return JSON.parse(jsonText.trim()) as KeyInfo;
-    } catch (e) {
-        console.error("JSON Parsing Error: Failed to parse the response from Gemini API.", {
-            error: e,
-            response: jsonText
-        });
-        throw new Error("Failed to process key information from the AI model due to a formatting error.");
-    }
+    console.error("Gemini API Error: Expected a valid JSON string response for key info extraction, but got:", jsonText);
+    throw new Error("Failed to extract key info: received an empty or invalid response from the AI model.");
 }
 
 // --- Main async processing function ---
