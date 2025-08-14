@@ -28,7 +28,11 @@ export async function transcribeMedia(base64Data: string, mimeType: string): Pro
             model: model,
             contents: { parts: [textPart, audioPart] },
         });
-        return response.text;
+        const text = response.text;
+        if (text === undefined) {
+            throw new Error("Failed to transcribe media file: received an undefined response from the AI model.");
+        }
+        return text;
     } catch (error) {
         console.error(`Error calling Gemini API for transcription:`, error);
         throw new Error("Failed to transcribe media file. The file might be unsupported, corrupted, or too large.");
@@ -48,7 +52,11 @@ export async function generateContent(promptTemplate: string, transcription: str
             }
         });
         
-        return response.text;
+        const text = response.text;
+        if (text === undefined) {
+            throw new Error("Failed to generate content: received an undefined response from the AI model.");
+        }
+        return text;
     } catch (error) {
         console.error(`Error calling Gemini API for content generation:`, error);
         throw new Error("Failed to generate document content from AI.");
@@ -68,8 +76,11 @@ export async function generateKeyInfo(transcription: string): Promise<KeyInfo> {
             },
         });
         
-        const jsonText = response.text.trim();
-        return JSON.parse(jsonText) as KeyInfo;
+        const jsonText = response.text;
+        if (!jsonText) {
+             throw new Error("Failed to extract key info: received an empty or undefined response from the AI model.");
+        }
+        return JSON.parse(jsonText.trim()) as KeyInfo;
 
     } catch (error) {
         console.error(`Error calling Gemini API for key info extraction:`, error);

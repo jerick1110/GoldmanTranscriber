@@ -16,7 +16,11 @@ async function transcribeMedia(base64Data: string, mimeType: string): Promise<st
     const audioPart = { inlineData: { mimeType, data: base64Data } };
     const textPart = { text: "Transcribe this audio/video file. Provide only the transcribed text, with no additional commentary or formatting." };
     const response = await ai.models.generateContent({ model, contents: { parts: [textPart, audioPart] } });
-    return response.text;
+    const text = response.text;
+    if (text === undefined) {
+        throw new Error("Transcription failed: received an undefined response from the AI model.");
+    }
+    return text;
 }
 
 async function generateContent(promptTemplate: string, transcription: string): Promise<string> {
@@ -26,7 +30,11 @@ async function generateContent(promptTemplate: string, transcription: string): P
         contents: fullPrompt,
         config: { temperature: 0.2, topP: 0.9 }
     });
-    return response.text;
+    const text = response.text;
+    if (text === undefined) {
+        throw new Error("Content generation failed: received an undefined response from the AI model.");
+    }
+    return text;
 }
 
 async function generateKeyInfo(transcription: string): Promise<KeyInfo> {
@@ -36,7 +44,11 @@ async function generateKeyInfo(transcription: string): Promise<KeyInfo> {
         contents,
         config: { responseMimeType: "application/json", responseSchema: KEY_INFO_PROMPT_SCHEMA }
     });
-    return JSON.parse(response.text.trim()) as KeyInfo;
+    const jsonText = response.text;
+    if (!jsonText) {
+        throw new Error("Key info extraction failed: received an empty or undefined response from the AI model.");
+    }
+    return JSON.parse(jsonText.trim()) as KeyInfo;
 }
 
 

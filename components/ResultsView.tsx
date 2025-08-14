@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { AIGeneratedContent, ResultTab, ExportFormat, DocumentStats, KeyInfo } from '../types';
+import { AIGeneratedContent, ResultTab, ExportFormat, DocumentStats } from '../types';
 import { exportContent } from '../services/exportService';
 import MetadataPanel from './MetadataPanel';
 
@@ -40,15 +40,15 @@ const ResultsView: React.FC<ResultsViewProps> = ({ transcription, aiContent, onR
         let html = text;
 
         // Process table blocks first
-        html = html.replace(/^\|(.+)\|\s*\n\|([ -:]+)\|\s*\n((?:\|.*\|\s*\n?)+)/gm, (match, header, separator, body) => {
-            const headerCells = header.split('|').slice(1, -1).map(h => h.trim());
-            const bodyRows = body.trim().split('\n').map(r => r.split('|').slice(1, -1).map(c => c.trim()));
+        html = html.replace(/^\|(.+)\|\s*\n\|([ -:]+)\|\s*\n((?:\|.*\|\s*\n?)+)/gm, (_match, header, _separator, body) => {
+            const headerCells = header.split('|').slice(1, -1).map((h: string) => h.trim());
+            const bodyRows = body.trim().split('\n').map((r: string) => r.split('|').slice(1, -1).map((c: string) => c.trim()));
             let table = '<table class="min-w-full my-6 text-left table-auto border-collapse">';
             table += `<thead><tr class="border-b-2 border-brand-muted-gold/50">`;
-            table += headerCells.map(c => `<th scope="col" class="px-4 py-3 text-sm font-semibold text-brand-muted-gold bg-brand-slate/30">${c}</th>`).join('');
+            table += headerCells.map((c: string) => `<th scope="col" class="px-4 py-3 text-sm font-semibold text-brand-muted-gold bg-brand-slate/30">${c}</th>`).join('');
             table += '</tr></thead>';
             table += '<tbody class="divide-y divide-brand-slate/50">';
-            table += bodyRows.map(row => `<tr>${row.map(cell => `<td class="px-4 py-3 text-sm text-brand-light-gray">${cell}</td>`).join('')}</tr>`).join('');
+            table += bodyRows.map((row: string[]) => `<tr>${row.map((cell: string) => `<td class="px-4 py-3 text-sm text-brand-light-gray">${cell}</td>`).join('')}</tr>`).join('');
             table += '</tbody></table>';
             return table;
         });
