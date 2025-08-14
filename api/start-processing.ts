@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { SOP_PROMPT, SUMMARY_PROMPT, ACTION_ITEMS_PROMPT, KEY_INFO_PROMPT_SCHEMA, MOCK_TRANSCRIPTION } from '../constants';
 import { KeyInfo } from '../types';
 import { jobStorage } from './_job-storage'; // In-memory store
@@ -20,7 +20,11 @@ async function generateContent(promptTemplate: string, transcription: string): P
         contents: fullPrompt,
         config: { temperature: 0.2, topP: 0.9 }
     });
-    return response.text;
+    const text = response.text;
+    if (text === undefined) {
+        throw new Error("Failed to generate content: received an undefined response from the AI model.");
+    }
+    return text;
 }
 
 async function generateKeyInfo(transcription: string): Promise<KeyInfo> {
@@ -31,6 +35,9 @@ async function generateKeyInfo(transcription: string): Promise<KeyInfo> {
         config: { responseMimeType: "application/json", responseSchema: KEY_INFO_PROMPT_SCHEMA }
     });
     const jsonText = response.text;
+    if (!jsonText) {
+        throw new Error("Failed to extract key info: received an empty or undefined response from the AI model.");
+    }
     return JSON.parse(jsonText.trim()) as KeyInfo;
 }
 // --- Main async processing function ---
