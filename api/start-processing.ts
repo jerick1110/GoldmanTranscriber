@@ -20,10 +20,14 @@ async function generateContent(promptTemplate: string, transcription: string): P
         contents: fullPrompt,
         config: { temperature: 0.2, topP: 0.9 }
     });
+    
+    // The response.text can be undefined. We must handle this case.
     const text = response.text;
-    if (text === undefined) {
-        throw new Error("Failed to generate content: received an undefined response from the AI model.");
+    if (typeof text !== 'string') {
+        console.error("Gemini API Error: Expected a string response for content generation, but got:", text);
+        throw new Error("Failed to generate content: received an invalid response from the AI model.");
     }
+    
     return text;
 }
 
@@ -34,12 +38,25 @@ async function generateKeyInfo(transcription: string): Promise<KeyInfo> {
         contents,
         config: { responseMimeType: "application/json", responseSchema: KEY_INFO_PROMPT_SCHEMA }
     });
+    
+    // The response.text can be undefined. We must handle this case before parsing.
     const jsonText = response.text;
-    if (!jsonText) {
-        throw new Error("Failed to extract key info: received an empty or undefined response from the AI model.");
+    if (typeof jsonText !== 'string' || jsonText.trim() === '') {
+        console.error("Gemini API Error: Expected a JSON string response for key info extraction, but got:", jsonText);
+        throw new Error("Failed to extract key info: received an empty or invalid response from the AI model.");
     }
-    return JSON.parse(jsonText.trim()) as KeyInfo;
+    
+    try {
+        return JSON.parse(jsonText.trim()) as KeyInfo;
+    } catch (e) {
+        console.error("JSON Parsing Error: Failed to parse the response from Gemini API.", {
+            error: e,
+            response: jsonText
+        });
+        throw new Error("Failed to process key information from the AI model due to a formatting error.");
+    }
 }
+
 // --- Main async processing function ---
 async function processFileInBackground(jobId: string) {
     try {
