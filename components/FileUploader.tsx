@@ -8,10 +8,9 @@ interface FileUploaderProps {
     error: string | null;
 }
 
-// NOTE: Vercel Hobby plan has a 4.5MB request body limit for serverless functions.
-// Base64 encoding increases file size by ~33%. A 3MB file becomes ~4MB.
-// This limit prevents deployment failures for large files.
-const MAX_FILE_SIZE_MB = 3;
+// With the new async architecture, the frontend only sends metadata, not the file blob.
+// This means we can now support much larger files.
+const MAX_FILE_SIZE_MB = 300;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelect, onDemo, error }) => {
@@ -29,7 +28,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelect, onDemo, error
         }
 
         if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
-            setLocalError(`File size exceeds the ${MAX_FILE_SIZE_MB}MB limit for this deployment.`);
+            setLocalError(`File size exceeds the ${MAX_FILE_SIZE_MB}MB limit.`);
             setFile(null);
             return;
         }

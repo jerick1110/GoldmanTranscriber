@@ -1,6 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { AppState, ViewType, DocumentStats } from './types';
-import { fileToBase64 } from './utils';
+import React, { useState, useCallback, useEffect } from 'react';
+import { AppState, ViewType, DocumentStats, JobStatus } from './types';
 import { MOCK_TRANSCRIPTION, MOCK_SOP, MOCK_SUMMARY, MOCK_ACTION_ITEMS, MOCK_KEY_INFO } from './constants';
 
 import Header from './components/Header';
@@ -22,6 +21,8 @@ const App: React.FC = () => {
         error: null,
         stats: null,
         isFocusMode: false,
+        jobId: null,
+        jobStatus: null,
     });
 
     const resetState = useCallback(() => {
@@ -33,6 +34,8 @@ const App: React.FC = () => {
             error: null,
             stats: null,
             isFocusMode: false,
+            jobId: null,
+            jobStatus: null,
         });
     }, []);
 
@@ -45,58 +48,107 @@ const App: React.FC = () => {
     };
 
     const handleFileSelect = useCallback(async (selectedFile: File) => {
-        setAppState(prev => ({ ...prev, file: selectedFile, view: ViewType.PROCESSING, error: null }));
+        setAppState(prev => ({ 
+            ...prev, 
+            file: selectedFile, 
+            view: ViewType.PROCESSING, 
+            error: null,
+            jobStatus: { status: 'PENDING', message: 'Initiating processing job...' },
+        }));
 
         try {
-            // 1. Convert file to base64
-            const base64Data = await fileToBase64(selectedFile);
-
-            // 2. Send to secure backend endpoint
-            const response = await fetch('/api/process', {
+            // This simulates uploading to a cloud storage and getting a file handle/URL
+            // In a real app, you'd use a signed URL to upload directly to GCS/S3.
+            // Then you'd send the resulting URL to your backend.
+            const response = await fetch('/api/start-processing', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ base64Data, mimeType: selectedFile.type }),
+                body: JSON.stringify({ 
+                    fileName: selectedFile.name,
+                    fileType: selectedFile.type,
+                    fileSize: selectedFile.size,
+                }),
             });
 
             if (!response.ok) {
-                 const contentType = response.headers.get('content-type');
-                let serverError = `Server responded with status ${response.status}.`;
-                if (contentType && contentType.includes('application/json')) {
-                    const errorData = await response.json().catch(() => null); // Avoid parsing error
-                    serverError = errorData?.error || 'An error occurred on the server.';
-                } else {
-                    // This is likely a Vercel timeout or other infrastructure error returning HTML
-                    serverError = 'The server took too long to respond. This might be due to a large file or high server load. Please try a smaller file.';
-                }
-                throw new Error(serverError);
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to start processing job.');
             }
             
-            const results = await response.json();
+            const { jobId } = await response.json();
+            setAppState(prev => ({ ...prev, jobId }));
 
-            // 4. Update state with final results from backend
-            const sopStats = calculateStats(results.sop);
-            setAppState(prev => ({
-                ...prev,
-                transcription: results.transcription,
-                aiContent: {
-                    sop: results.sop,
-                    summary: results.summary,
-                    actionItems: results.actionItems,
-                    keyInfo: results.keyInfo,
-                },
-                stats: sopStats,
-                view: ViewType.RESULTS,
-            }));
         } catch (err) {
             console.error(err);
-            const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred during processing.';
+            const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
             setAppState(prev => ({ 
                 ...prev, 
-                error: `Failed to process your file. ${errorMessage}`, 
+                error: `Failed to start processing. ${errorMessage}`, 
                 view: ViewType.UPLOAD 
             }));
         }
     }, []);
+
+    // Polling effect for job status
+    useEffect(() => {
+        if (appState.jobId && appState.view === ViewType.PROCESSING) {
+            const interval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/status?jobId=${appState.jobId}`);
+                    if (!res.ok) {
+                         // Stop polling on server error
+                        throw new Error('Server error, stopping status checks.');
+                    }
+                    
+                    const data: { status: JobStatus, results?: any } = await res.json();
+                    
+                    setAppState(prev => ({...prev, jobStatus: data.status }));
+
+                    if (data.status.status === 'COMPLETED' || data.status.status === 'FAILED') {
+                        clearInterval(interval);
+                        if(data.status.status === 'COMPLETED' && data.results) {
+                            const sopStats = calculateStats(data.results.sop);
+                             setAppState(prev => ({
+                                ...prev,
+                                transcription: data.results.transcription,
+                                aiContent: {
+                                    sop: data.results.sop,
+                                    summary: data.results.summary,
+                                    actionItems: data.results.actionItems,
+                                    keyInfo: data.results.keyInfo,
+                                },
+                                stats: sopStats,
+                                view: ViewType.RESULTS,
+                                jobId: null,
+                                jobStatus: null,
+                            }));
+                        } else {
+                             setAppState(prev => ({
+                                ...prev,
+                                error: data.status.message || 'Processing failed. Please try again.',
+                                view: ViewType.UPLOAD,
+                                jobId: null,
+                                jobStatus: null,
+                             }));
+                        }
+                    }
+                } catch (error) {
+                    console.error("Polling error:", error);
+                    clearInterval(interval);
+                    setAppState(prev => ({
+                        ...prev,
+                        error: 'Lost connection to server. Please try again.',
+                        view: ViewType.UPLOAD,
+                        jobId: null,
+                        jobStatus: null,
+                    }));
+                }
+            }, 3000);
+
+            return () => clearInterval(interval);
+        }
+    }, [appState.jobId, appState.view]);
+
 
     const handleDemo = useCallback(() => {
         setAppState(prev => ({ ...prev, view: ViewType.PROCESSING, error: null }));
@@ -122,6 +174,8 @@ const App: React.FC = () => {
                 stats: sopStats,
                 error: null,
                 isFocusMode: false,
+                jobId: null,
+                jobStatus: null,
             });
         }, 2000);
     }, []);
@@ -140,7 +194,7 @@ const App: React.FC = () => {
     const renderContent = () => {
         switch (appState.view) {
             case ViewType.PROCESSING:
-                return <ProcessingView />;
+                return <ProcessingView status={appState.jobStatus} />;
             case ViewType.RESULTS:
                 return (
                     <ResultsView 
