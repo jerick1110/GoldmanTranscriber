@@ -23,14 +23,14 @@ async function generateContent(promptTemplate: string, transcription: string): P
     
     const text = response.text;
 
-    // Check for a truthy response (not undefined, not an empty string) before returning.
-    if (text) {
-        return text;
+    // Use a strict `typeof` check. This is the most reliable way to guard against
+    // `undefined` and satisfy the TypeScript compiler.
+    if (typeof text !== 'string') {
+        console.error("Gemini API Error: Expected a valid string response for content generation, but got:", text);
+        throw new Error("Failed to generate content: received an invalid response from the AI model.");
     }
-    
-    // If the response is invalid, log the error and throw.
-    console.error("Gemini API Error: Expected a valid string response for content generation, but got:", text);
-    throw new Error("Failed to generate content: received an invalid response from the AI model.");
+
+    return text;
 }
 
 async function generateKeyInfo(transcription: string): Promise<KeyInfo> {
@@ -43,22 +43,22 @@ async function generateKeyInfo(transcription: string): Promise<KeyInfo> {
     
     const jsonText = response.text;
 
-    // Check for a truthy response before attempting to parse it.
-    if (jsonText) {
-        try {
-            return JSON.parse(jsonText.trim()) as KeyInfo;
-        } catch (e) {
-            console.error("JSON Parsing Error: Failed to parse the response from Gemini API.", {
-                error: e,
-                response: jsonText // Safe to log here as jsonText is a string.
-            });
-            throw new Error("Failed to process key information from the AI model due to a formatting error.");
-        }
+    // Use a strict `typeof` check to ensure the response is a string and not empty
+    // before attempting to parse it as JSON.
+    if (typeof jsonText !== 'string' || jsonText.trim() === '') {
+        console.error("Gemini API Error: Expected a valid JSON string response for key info extraction, but got:", jsonText);
+        throw new Error("Failed to extract key info: received an empty or invalid response from the AI model.");
     }
     
-    // If the response is invalid, log the error and throw.
-    console.error("Gemini API Error: Expected a valid JSON string response for key info extraction, but got:", jsonText);
-    throw new Error("Failed to extract key info: received an empty or invalid response from the AI model.");
+    try {
+        return JSON.parse(jsonText.trim()) as KeyInfo;
+    } catch (e) {
+        console.error("JSON Parsing Error: Failed to parse the response from Gemini API.", {
+            error: e,
+            response: jsonText
+        });
+        throw new Error("Failed to process key information from the AI model due to a formatting error.");
+    }
 }
 
 // --- Main async processing function ---
