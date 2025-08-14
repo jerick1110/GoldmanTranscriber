@@ -56,8 +56,16 @@ const App: React.FC = () => {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'An error occurred on the server.');
+                 const contentType = response.headers.get('content-type');
+                let serverError = `Server responded with status ${response.status}.`;
+                if (contentType && contentType.includes('application/json')) {
+                    const errorData = await response.json().catch(() => null); // Avoid parsing error
+                    serverError = errorData?.error || 'An error occurred on the server.';
+                } else {
+                    // This is likely a Vercel timeout or other infrastructure error returning HTML
+                    serverError = 'The server took too long to respond. This might be due to a large file or high server load. Please try a smaller file.';
+                }
+                throw new Error(serverError);
             }
             
             const results = await response.json();
