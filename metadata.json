@@ -1,0 +1,5 @@
+{
+  "name": "Goldman Video/Audio Transcriber",
+  "description": "An intelligent application to transcribe video and audio recordings and automatically generate Standard Operating Procedures (SOPs), summaries, and action items. Supports various export formats for seamless workflow integration.",
+  "requestFramePermissions": []
+}
