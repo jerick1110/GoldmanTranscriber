@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { AIGeneratedContent, ResultTab, ExportFormat, DocumentStats } from '../types';
 import { exportContent } from '../services/exportService';
 import MetadataPanel from './MetadataPanel';
+import { ExpandIcon } from './icons/ExpandIcon';
+import { CollapseIcon } from './icons/CollapseIcon';
 
 interface ResultsViewProps {
     transcription: string;
@@ -10,9 +12,11 @@ interface ResultsViewProps {
     file: File | null;
     stats: DocumentStats | null;
     onTabChange: (content: string) => void;
+    isFocusMode: boolean;
+    onToggleFocusMode: () => void;
 }
 
-const ResultsView: React.FC<ResultsViewProps> = ({ transcription, aiContent, onReset, file, stats, onTabChange }) => {
+const ResultsView: React.FC<ResultsViewProps> = ({ transcription, aiContent, onReset, file, stats, onTabChange, isFocusMode, onToggleFocusMode }) => {
     const [activeTab, setActiveTab] = useState<ResultTab>(ResultTab.SOP);
     const contentRef = useRef<HTMLDivElement>(null);
 
@@ -92,11 +96,11 @@ const ResultsView: React.FC<ResultsViewProps> = ({ transcription, aiContent, onR
     };
 
     return (
-        <div className="w-full grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        <div className={`w-full grid grid-cols-1 ${isFocusMode ? '' : 'lg:grid-cols-3 xl:grid-cols-4'} gap-8`}>
             {/* Left Column: Main Content */}
-            <div className="lg:col-span-2 xl:col-span-3">
+            <div className={`${isFocusMode ? 'lg:col-span-3 xl:col-span-4' : 'lg:col-span-2 xl:col-span-3'}`}>
                  <div className="bg-brand-slate rounded-lg shadow-2xl border border-brand-slate/50">
-                    <div className="flex items-center border-b border-brand-slate/50 p-2">
+                    <div className="flex items-center justify-between border-b border-brand-slate/50 p-2">
                         <div className="flex space-x-1">
                             {Object.values(ResultTab).map((tab) => (
                                 <button
@@ -108,24 +112,33 @@ const ResultsView: React.FC<ResultsViewProps> = ({ transcription, aiContent, onR
                                 </button>
                             ))}
                         </div>
+                         <button
+                            onClick={onToggleFocusMode}
+                            className="p-2 rounded-md text-slate-300 hover:bg-brand-charcoal/50 hover:text-white"
+                            title={isFocusMode ? 'Exit Focus Mode' : 'Enter Focus Mode'}
+                         >
+                            {isFocusMode ? <CollapseIcon className="w-5 h-5" /> : <ExpandIcon className="w-5 h-5" />}
+                        </button>
                     </div>
-                    <div className="h-[70vh] overflow-y-auto bg-brand-charcoal rounded-b-lg">
+                    <div className={`${isFocusMode ? 'h-auto' : 'h-[70vh]'} overflow-y-auto bg-brand-charcoal rounded-b-lg`}>
                         {renderContent()}
                     </div>
                 </div>
             </div>
 
             {/* Right Column: Metadata and Actions */}
-            <div className="lg:col-span-1 xl:col-span-1">
-                <MetadataPanel
-                    file={file}
-                    stats={stats}
-                    keyInfo={aiContent.keyInfo}
-                    onReset={onReset}
-                    onDownload={handleDownload}
-                    currentContent={currentContent}
-                />
-            </div>
+            {!isFocusMode && (
+                 <div className="lg:col-span-1 xl:col-span-1">
+                    <MetadataPanel
+                        file={file}
+                        stats={stats}
+                        keyInfo={aiContent.keyInfo}
+                        onReset={onReset}
+                        onDownload={handleDownload}
+                        currentContent={currentContent}
+                    />
+                </div>
+            )}
         </div>
     );
 };

@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { AppState, ViewType, DocumentStats } from './types';
 import { fileToBase64 } from './utils';
+import { MOCK_TRANSCRIPTION, MOCK_SOP, MOCK_SUMMARY, MOCK_ACTION_ITEMS, MOCK_KEY_INFO } from './constants';
 
 import Header from './components/Header';
 import FileUploader from './components/FileUploader';
@@ -20,6 +21,7 @@ const App: React.FC = () => {
         },
         error: null,
         stats: null,
+        isFocusMode: false,
     });
 
     const resetState = useCallback(() => {
@@ -30,6 +32,7 @@ const App: React.FC = () => {
             aiContent: { sop: '', summary: '', actionItems: '', keyInfo: null },
             error: null,
             stats: null,
+            isFocusMode: false,
         });
     }, []);
 
@@ -95,11 +98,43 @@ const App: React.FC = () => {
         }
     }, []);
 
+    const handleDemo = useCallback(() => {
+        setAppState(prev => ({ ...prev, view: ViewType.PROCESSING, error: null }));
+
+        const mockFile = new File([MOCK_TRANSCRIPTION], "sample-meeting-recording.mp3", {
+          type: "audio/mpeg",
+          lastModified: new Date().getTime(),
+        });
+
+        // Simulate processing time for a better UX
+        setTimeout(() => {
+            const sopStats = calculateStats(MOCK_SOP);
+            setAppState({
+                view: ViewType.RESULTS,
+                file: mockFile,
+                transcription: MOCK_TRANSCRIPTION,
+                aiContent: {
+                    sop: MOCK_SOP,
+                    summary: MOCK_SUMMARY,
+                    actionItems: MOCK_ACTION_ITEMS,
+                    keyInfo: MOCK_KEY_INFO,
+                },
+                stats: sopStats,
+                error: null,
+                isFocusMode: false,
+            });
+        }, 2000);
+    }, []);
+
     const handleTabChange = (content: string) => {
         setAppState(prev => ({
             ...prev,
             stats: calculateStats(content),
         }));
+    };
+
+    const toggleFocusMode = () => {
+        setAppState(prev => ({ ...prev, isFocusMode: !prev.isFocusMode }));
     };
 
     const renderContent = () => {
@@ -115,25 +150,29 @@ const App: React.FC = () => {
                         file={appState.file}
                         stats={appState.stats}
                         onTabChange={handleTabChange}
+                        isFocusMode={appState.isFocusMode}
+                        onToggleFocusMode={toggleFocusMode}
                     />
                 );
             case ViewType.UPLOAD:
             default:
-                return <FileUploader onFileSelect={handleFileSelect} error={appState.error} />;
+                return <FileUploader onFileSelect={handleFileSelect} onDemo={handleDemo} error={appState.error} />;
         }
     };
 
     return (
         <div className="min-h-screen bg-brand-charcoal text-brand-light-gray font-sans">
-            <Header onReset={resetState} />
-            <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            {!appState.isFocusMode && <Header onReset={resetState} />}
+            <main className={`max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 ${appState.isFocusMode ? 'py-0' : 'py-12'}`}>
                 <div className="w-full">
                     {renderContent()}
                 </div>
             </main>
-             <footer className="text-center py-4 text-slate-500 text-sm">
-                <p>Powered by Gemini API. Designed for excellence.</p>
-            </footer>
+             {!appState.isFocusMode && (
+                <footer className="text-center py-4 text-slate-500 text-sm">
+                    <p>Powered by Gemini API. Designed for excellence.</p>
+                </footer>
+            )}
         </div>
     );
 };

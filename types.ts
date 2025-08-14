@@ -31,6 +31,7 @@ export interface AppState {
     aiContent: AIGeneratedContent;
     error: string | null;
     stats: DocumentStats | null;
+    isFocusMode: boolean; // Added for focus mode
 }
 
 export enum ExportFormat {

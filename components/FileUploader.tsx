@@ -4,6 +4,7 @@ import { FileIcon } from './icons/FileIcon';
 
 interface FileUploaderProps {
     onFileSelect: (file: File) => void;
+    onDemo: () => void;
     error: string | null;
 }
 
@@ -13,7 +14,7 @@ interface FileUploaderProps {
 const MAX_FILE_SIZE_MB = 3;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
-const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelect, error }) => {
+const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelect, onDemo, error }) => {
     const [dragging, setDragging] = useState(false);
     const [file, setFile] = useState<File | null>(null);
     const [localError, setLocalError] = useState<string | null>(null);
@@ -126,6 +127,22 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelect, error }) => {
             >
                 Transcribe & Generate Document
             </button>
+
+            <div className="relative flex py-8 items-center w-full max-w-sm">
+                <div className="flex-grow border-t border-brand-slate"></div>
+                <span className="flex-shrink mx-4 text-slate-400 font-semibold">OR</span>
+                <div className="flex-grow border-t border-brand-slate"></div>
+            </div>
+
+            <div className="text-center">
+                <p className="mb-4 text-slate-300">Not ready to upload? See how it works with a sample file.</p>
+                <button
+                    onClick={onDemo}
+                    className="px-8 py-3 bg-brand-slate text-brand-light-gray font-semibold rounded-lg shadow-md hover:bg-brand-muted-gold/20 border border-brand-slate/50 hover:border-brand-muted-gold/50 transition-all duration-300"
+                >
+                    Try a Demo
+                </button>
+            </div>
         </div>
     );
 };
