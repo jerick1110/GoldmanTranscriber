@@ -4,6 +4,11 @@ export enum ViewType {
     RESULTS = 'RESULTS',
 }
 
+export interface JobStatus {
+    status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+    message: string;
+}
+
 export interface KeyInfo {
     taskName: string;
     mentionedApps: string[];
@@ -24,11 +29,6 @@ export interface DocumentStats {
     readingTimeMinutes: number;
 }
 
-export interface JobStatus {
-    status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
-    message: string;
-}
-
 export interface AppState {
     view: ViewType;
     file: File | null;
@@ -37,8 +37,6 @@ export interface AppState {
     error: string | null;
     stats: DocumentStats | null;
     isFocusMode: boolean;
-    jobId: string | null;
-    jobStatus: JobStatus | null;
 }
 
 export enum ExportFormat {

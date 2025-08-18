@@ -8,9 +8,8 @@ interface FileUploaderProps {
     error: string | null;
 }
 
-// With the new async architecture, the frontend only sends metadata, not the file blob.
-// This means we can now support much larger files.
-const MAX_FILE_SIZE_MB = 300;
+// Client-side processing can be memory intensive. 50MB is a safer limit.
+const MAX_FILE_SIZE_MB = 50;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelect, onDemo, error }) => {
